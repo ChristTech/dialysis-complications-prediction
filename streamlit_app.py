@@ -28,6 +28,7 @@ st.markdown(
     .stApp {{
         background-image: url(data:image/png;base64,{encoded_string});
         background-size: cover;
+        background-blend-mode: lighten;
     }}
     </style>
 """,
@@ -49,13 +50,13 @@ Predictions are generated using an ensemble of SVM, Random Forest, and Neural Ne
 
 # Collect Input from User
 with st.form("input_form"):
-    age = st.slider("Age", 18, 90, 65)
-    systolic_bp = st.slider("Systolic Blood Pressure", 80, 200, 120)
-    diastolic_bp = st.slider("Diastolic Blood Pressure", 50, 130, 80)
-    weight_gain = st.number_input("Weight Gain (kg)", 0.0, 10.0, 3.5)
-    sodium_level = st.slider("Sodium Level", 120, 160, 140)
-    potassium_level = st.slider("Potassium Level", 2.0, 6.0, 3.5)
-    bun = st.slider("BUN (Blood Urea Nitrogen)", 5, 60, 20)
+    age = st.slider("Age", 65)
+    systolic_bp = st.slider("Systolic Blood Pressure", 120)
+    diastolic_bp = st.slider("Diastolic Blood Pressure", 80)
+    weight_gain = st.number_input("Weight Gain (kg)", 3.5)
+    sodium_level = st.slider("Sodium Level", 140)
+    potassium_level = st.slider("Potassium Level", 3.5)
+    bun = st.slider("BUN (Blood Urea Nitrogen)", 20)
     dialysis_duration = st.slider("Dialysis Duration (hours)", 1, 8, 4)
     comorbid_diabetes = st.radio("Comorbid Diabetes", [0, 1])
     comorbid_hypertension = st.radio("Comorbid Hypertension", [0, 1])
