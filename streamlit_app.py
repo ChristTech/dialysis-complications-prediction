@@ -2,16 +2,13 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import joblib
-from tensorflow.keras.models import load_model
 from PIL import Image
-import base64  # Import the base64 module
+import base64
 
-# Load models and scaler
+# Load voting model and scaler
 try:
+    voting_model = joblib.load("voting_model.pkl")
     scaler = joblib.load("scaler.pkl")
-    svm_model = joblib.load("svm_model.pkl")
-    rf_model = joblib.load("rf_model.pkl")
-    nn_model = load_model("nn_model.h5")
 except FileNotFoundError as e:
     st.error(f"Error loading model or scaler: {e}. Please check if the files exist.")
     st.stop()
@@ -20,7 +17,6 @@ except FileNotFoundError as e:
 
 with open("background.jpg", "rb") as f:
     encoded = f.read()
-# Use base64.b64encode instead of deprecated "base64" encoding
 encoded_string = base64.b64encode(encoded).decode()
 st.markdown(
     f"""
@@ -35,16 +31,12 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-
-# Optional: Uncomment if you want to use a background image
-# add_bg_from_local("background.png")
-
 # App Title and Description
 st.title("Dialysis Complication Risk Prediction")
 st.markdown(
     """
 This tool predicts the risk of complications in dialysis patients based on basic health inputs. 
-Predictions are generated using an ensemble of SVM, Random Forest, and Neural Network models.
+Predictions are generated using an ensemble model.
 """
 )
 
@@ -86,31 +78,22 @@ if submitted:
 
     scaled_input = scaler.transform(new_data)
 
-    # Predict and show individual model confidences
-    svm_proba = svm_model.predict_proba(scaled_input)[0][1]
-    rf_proba = rf_model.predict_proba(scaled_input)[0][1]
-    nn_proba = nn_model.predict(scaled_input)[0][0]
+    # Predict using the voting model
+    final_proba = voting_model.predict_proba(scaled_input)[0][1]
 
-    st.subheader("Model Confidence Levels")
-    st.write(f"SVM: {svm_proba:.2f}")
-    st.write(f"Random Forest: {rf_proba:.2f}")
-    st.write(f"Neural Network: {nn_proba:.2f}")
-
-    # Voting
-    votes = [svm_proba > 0.5, rf_proba > 0.5, nn_proba > 0.5]
-    final_vote = sum(votes) >= 2
+    st.subheader("Model Confidence Level")
+    st.write(f"Ensemble Confidence: {final_proba:.2f}")
 
     st.subheader("Final Ensemble Prediction")
-    if final_vote:
+    if final_proba > 0.5:
         st.error("High Risk of Dialysis Complication ❗")
     else:
         st.success("Low Risk of Dialysis Complication ✅")
 
     # Risk level interpretation
-    avg_confidence = np.mean([svm_proba, rf_proba, nn_proba])
-    if avg_confidence > 0.75:
+    if final_proba > 0.75:
         st.markdown("**🟢 Confidence: Very High (Low Risk)**")
-    elif avg_confidence > 0.5:
+    elif final_proba > 0.5:
         st.markdown("**🟠 Confidence: Moderate**")
     else:
         st.markdown("**🔴 Confidence: Low (High Risk)**")
