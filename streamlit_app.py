@@ -18,7 +18,7 @@ except FileNotFoundError as e:
 
 # Set background image via base64 CSS injection
 
-with open("backgrouond.jpg", "rb") as f:
+with open("background.jpg", "rb") as f:
     encoded = f.read()
 # Use base64.b64encode instead of deprecated "base64" encoding
 encoded_string = base64.b64encode(encoded).decode()
