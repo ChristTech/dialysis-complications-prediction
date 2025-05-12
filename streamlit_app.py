@@ -52,7 +52,7 @@ Predictions are generated using an ensemble of SVM, Random Forest, and Neural Ne
 with st.form("input_form"):
     age = st.slider("Age", 18, 90, 65)
     systolic_bp = st.slider("Systolic Blood Pressure", 50, 200, 150)
-    diastolic_bp = st.slider("Diastolic Blood Pressure", 40, 130, 190)
+    diastolic_bp = st.slider("Diastolic Blood Pressure", 40, 130, 70)
     weight_gain = st.number_input("Weight Gain (kg)", 0.0, 10.0, 3.5)
     sodium_level = st.slider("Sodium Level", 120, 160, 140)
     potassium_level = st.slider("Potassium Level", 2.0, 6.0, 3.5)
