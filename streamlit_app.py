@@ -4,8 +4,9 @@ import numpy as np
 import joblib
 from PIL import Image
 import base64
-from tensorflow.keras.models import Sequential
+from tensorflow.keras.models import Sequential, load_model
 from tensorflow.keras.layers import Dense
+from tensorflow import keras  # Import the keras module
 
 # Define neural network
 def build_nn_model():
@@ -18,7 +19,8 @@ def build_nn_model():
 
 # Load voting model and scaler
 try:
-    voting_model = joblib.load("voting_model.pkl")
+    with keras.utils.custom_object_scope({'build_nn_model': build_nn_model}):
+        voting_model = joblib.load("voting_model.pkl")
     scaler = joblib.load("scaler.pkl")
 except FileNotFoundError as e:
     st.error(f"Error loading model or scaler: {e}. Please check if the files exist.")
