@@ -17,22 +17,22 @@ except FileNotFoundError as e:
     st.stop()
 
 # Set background image via base64 CSS injection
-def add_bg_from_local(image_file):
-    with open(image_file, "rb") as f:
-        encoded = f.read()
-    # Use base64.b64encode instead of deprecated "base64" encoding
-    encoded_string = base64.b64encode(encoded).decode()
-    st.markdown(
-        f"""
-        <style>
-        .stApp {{
-            background-image: url(data:image/png;base64,{encoded_string});
-            background-size: cover;
-        }}
-        </style>
-    """,
-        unsafe_allow_html=True,
-    )
+
+with open("backgrouond.jpg", "rb") as f:
+    encoded = f.read()
+# Use base64.b64encode instead of deprecated "base64" encoding
+encoded_string = base64.b64encode(encoded).decode()
+st.markdown(
+    f"""
+    <style>
+    .stApp {{
+        background-image: url(data:image/png;base64,{encoded_string});
+        background-size: cover;
+    }}
+    </style>
+""",
+    unsafe_allow_html=True,
+)
 
 
 # Optional: Uncomment if you want to use a background image
