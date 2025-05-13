@@ -2,58 +2,56 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import joblib
-from PIL import Image
 import base64
-from tensorflow.keras.models import Sequential, load_model
+import datetime
+from PIL import Image
+from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense
-from tensorflow import keras  # Import the keras module
+from tensorflow import keras
 
-# Define neural network
+# Define the neural network architecture
 def build_nn_model():
     model = Sequential()
-    model.add(Dense(64, activation='relu', input_shape=(10,))) # Input shape needs to match your data
+    model.add(Dense(64, activation='relu', input_shape=(10,)))
     model.add(Dense(32, activation='relu'))
-    model.add(Dense(1, activation='sigmoid'))  # Binary classification
+    model.add(Dense(1, activation='sigmoid'))
     model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
     return model
 
-# Load voting model and scaler
+# Load models
 try:
     with keras.utils.custom_object_scope({'build_nn_model': build_nn_model}):
         voting_model = joblib.load("voting_model.pkl")
     scaler = joblib.load("scaler.pkl")
 except FileNotFoundError as e:
-    st.error(f"Error loading model or scaler: {e}. Please check if the files exist.")
+    st.error(f"Error loading model or scaler: {e}")
     st.stop()
 
-# Set background image via base64 CSS injection
-
+# Set background image
 with open("background.jpg", "rb") as f:
-    encoded = f.read()
-encoded_string = base64.b64encode(encoded).decode()
+    encoded = base64.b64encode(f.read()).decode()
+
 st.markdown(
     f"""
     <style>
     .stApp {{
-        background-image: url(data:image/png;base64,{encoded_string});
+        background-image: url("data:image/jpeg;base64,{encoded}");
         background-size: cover;
-        background-blend-mode: lighten;
+        background-repeat: no-repeat;
+        background-attachment: fixed;
     }}
     </style>
-""",
-    unsafe_allow_html=True,
+    """,
+    unsafe_allow_html=True
 )
 
-# App Title and Description
-st.title("Dialysis Complication Risk Prediction")
-st.markdown(
-    """
-This tool predicts the risk of complications in dialysis patients based on basic health inputs. 
-Predictions are generated using an ensemble model.
-"""
-)
+# Title
+st.title("🩺 Dialysis Complication Risk Prediction")
+st.markdown("""
+This app predicts the risk of complications in dialysis patients using an ensemble of machine learning models.
+""")
 
-# Collect Input from User
+# Input form
 with st.form("input_form"):
     age = st.slider("Age", 18, 90, 65)
     systolic_bp = st.slider("Systolic Blood Pressure", 50, 200, 150)
@@ -65,57 +63,95 @@ with st.form("input_form"):
     dialysis_duration = st.slider("Dialysis Duration (hours)", 1, 8, 4)
     comorbid_diabetes = st.radio("Comorbid Diabetes", [0, 1])
     comorbid_hypertension = st.radio("Comorbid Hypertension", [0, 1])
+    submitted = st.form_submit_button("🔍 Predict")
 
-    submitted = st.form_submit_button("Predict")
-
+# Prediction logic
 if submitted:
-    # Input Validation
     if systolic_bp <= diastolic_bp:
-        st.error("Systolic blood pressure must be greater than diastolic blood pressure.")
+        st.error("❌ Systolic blood pressure must be greater than diastolic blood pressure.")
         st.stop()
-    # Prepare and scale input
-    new_data = pd.DataFrame(
-        {
-            "age": [age],
-            "systolic_bp": [systolic_bp],
-            "diastolic_bp": [diastolic_bp],
-            "weight_gain": [weight_gain],
-            "sodium_level": [sodium_level],
-            "potassium_level": [potassium_level],
-            "bun": [bun],
-            "dialysis_duration": [dialysis_duration],
-            "comorbid_diabetes": [comorbid_diabetes],
-            "comorbid_hypertension": [comorbid_hypertension],
-        }
-    )
+
+    new_data = pd.DataFrame({
+        'age': [age],
+        'systolic_bp': [systolic_bp],
+        'diastolic_bp': [diastolic_bp],
+        'weight_gain': [weight_gain],
+        'sodium_level': [sodium_level],
+        'potassium_level': [potassium_level],
+        'bun': [bun],
+        'dialysis_duration': [dialysis_duration],
+        'comorbid_diabetes': [comorbid_diabetes],
+        'comorbid_hypertension': [comorbid_hypertension]
+    })
 
     scaled_input = scaler.transform(new_data)
-
-    # Predict using the voting model
     final_proba = voting_model.predict_proba(scaled_input)[0][1]
 
-    st.subheader("Model Confidence Level")
-    st.write(f"Ensemble Confidence: {final_proba:.2f}")
+    st.markdown("### 🧪 Model Confidence Level")
+    st.metric(label="Predicted Risk (%)", value=f"{final_proba * 100:.1f}")
 
-    st.subheader("Final Ensemble Prediction")
+    # Gauge-style chart using progress bar
+    st.progress(int(final_proba * 100))
+
+    # Risk Message
+    st.subheader("📌 Risk Prediction")
     if final_proba > 0.5:
         st.error("High Risk of Dialysis Complication ❗")
     else:
         st.success("Low Risk of Dialysis Complication ✅")
 
-    # Risk level interpretation
+    # Confidence Interpretation
     if final_proba > 0.75:
-        st.markdown("**🟢 Confidence: Very High (Low Risk)**")
+        st.markdown("**🟢 Confidence: Very High (High Risk)**")
     elif final_proba > 0.5:
         st.markdown("**🟠 Confidence: Moderate**")
     else:
-        st.markdown("**🔴 Confidence: Low (High Risk)**")
+        st.markdown("**🔴 Confidence: Low (Low Risk)**")
 
-# Feedback Form
+    # Timestamp
+    st.caption(f"🕒 Prediction made on: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+
+    # About Model
+    with st.expander("📊 About the Model"):
+        st.markdown("""
+        This prediction is generated using a **voting ensemble model** consisting of:
+        - 🎯 Support Vector Machine (SVM)
+        - 🌲 Random Forest
+        - 🧠 Neural Network (Keras)
+
+        Each model contributes to the final decision through soft voting (probability averaging).
+        """)
+
+    # Downloadable Report
+    report = f"""
+    Dialysis Complication Risk Report
+    ---------------------------------
+    Age: {age}
+    Systolic BP: {systolic_bp}
+    Diastolic BP: {diastolic_bp}
+    Weight Gain: {weight_gain}
+    Sodium Level: {sodium_level}
+    Potassium Level: {potassium_level}
+    BUN: {bun}
+    Dialysis Duration: {dialysis_duration}
+    Diabetes: {comorbid_diabetes}
+    Hypertension: {comorbid_hypertension}
+    Risk Score: {final_proba:.2f}
+    Prediction: {"High Risk ❗" if final_proba > 0.5 else "Low Risk ✅"}
+    Time: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+    """
+
+    st.download_button(
+        label="📄 Download Prediction Report",
+        data=report,
+        file_name="dialysis_risk_report.txt"
+    )
+
+# Feedback section
 st.markdown("---")
 st.subheader("💬 Feedback")
 with st.form("feedback_form"):
     feedback = st.text_input("Was this prediction helpful? Any suggestions?")
     submit_feedback = st.form_submit_button("Submit Feedback")
     if submit_feedback:
-        st.success("Thank you for your feedback!")
+        st.success("✅ Thank you for your feedback!")
