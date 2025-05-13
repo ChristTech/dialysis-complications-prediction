@@ -8,23 +8,34 @@ from PIL import Image
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense
 from tensorflow import keras
+from scikeras.wrappers import KerasClassifier
+from sklearn.ensemble import VotingClassifier
+from sklearn.svm import SVC
+from sklearn.ensemble import RandomForestClassifier
 
 # Define the neural network architecture
 def build_nn_model():
     model = Sequential()
-    model.add(Dense(64, activation='relu', input_shape=(10,)))
+    model.add(Dense(64, activation='relu', input_shape=(X_train.shape[1],)))
     model.add(Dense(32, activation='relu'))
-    model.add(Dense(1, activation='sigmoid'))
+    model.add(Dense(1, activation='sigmoid'))  # Binary classification
     model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
     return model
 
 # Load models
 try:
-    with keras.utils.custom_object_scope({'build_nn_model': build_nn_model}):
+    # Use custom_object_scope to handle the Keras model
+    with keras.utils.custom_object_scope({'build_nn_model': build_nn_model, 'KerasClassifier': KerasClassifier}):
         voting_model = joblib.load("voting_model.pkl")
     scaler = joblib.load("scaler.pkl")
 except FileNotFoundError as e:
     st.error(f"Error loading model or scaler: {e}")
+    st.stop()
+except AttributeError as e:
+    st.error(f"AttributeError during model loading: {e}.  Check versions and custom objects.")
+    st.stop()
+except Exception as e:
+    st.error(f"An unexpected error occurred: {e}")
     st.stop()
 
 # Set background image
