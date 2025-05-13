@@ -7,6 +7,9 @@ import datetime
 from PIL import Image
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense
+from tensorflow.keras.layers import TFSMLayer
+from tensorflow.keras.models import Model
+import tensorflow as tf
 from tensorflow import keras
 from scikeras.wrappers import KerasClassifier
 from sklearn.ensemble import VotingClassifier
@@ -16,7 +19,7 @@ from sklearn.ensemble import RandomForestClassifier
 # Define the neural network architecture
 def build_nn_model():
     model = Sequential()
-    model.add(Dense(64, activation='relu', input_shape=(X_train.shape[1],)))
+    model.add(Dense(64, activation='relu', input_shape=(10,)))
     model.add(Dense(32, activation='relu'))
     model.add(Dense(1, activation='sigmoid'))  # Binary classification
     model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
@@ -96,7 +99,22 @@ if submitted:
     })
 
     scaled_input = scaler.transform(new_data)
-    final_proba = voting_model.predict_proba(scaled_input)[0][1]
+
+    # Load the SavedModel as a Keras layer
+    saved_model_path = "path/to/your/saved_model"  # Replace with the actual path
+    tfsm_layer = TFSMLayer(saved_model_path, call_endpoint='serving_default')
+
+    # Create a Keras input
+    input_tensor = tf.keras.Input(shape=(10,))  # Adjust shape to match your input data
+
+    # Connect the input to the TFSMLayer
+    output_tensor = tfsm_layer(input_tensor)
+
+    # Create a Keras model
+    keras_model = Model(inputs=input_tensor, outputs=output_tensor)
+
+    # Make predictions
+    final_proba = keras_model.predict(scaled_input)[0][0]
 
     st.markdown("### 🧪 Model Confidence Level")
     st.metric(label="Predicted Risk (%)", value=f"{final_proba * 100:.1f}")
