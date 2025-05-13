@@ -26,38 +26,47 @@ def build_nn_model():
     return model
 
 # Load models
+voting_model = None  # Initialize to None
+scaler = None
+model_load_error = None  # Capture any loading errors
+
 try:
     # Use custom_object_scope to handle the Keras model
     with keras.utils.custom_object_scope({'build_nn_model': build_nn_model, 'KerasClassifier': KerasClassifier}):
         voting_model = joblib.load("voting_model.pkl")
     scaler = joblib.load("scaler.pkl")
 except FileNotFoundError as e:
-    st.error(f"Error loading model or scaler: {e}")
-    st.stop()
+    model_load_error = f"FileNotFoundError: {e}"
+    st.warning(f"Model or scaler file not found.  The app may not function correctly.  Check file paths.")
 except AttributeError as e:
-    st.error(f"AttributeError during model loading: {e}.  Check versions and custom objects.")
-    st.stop()
+    model_load_error = f"AttributeError: {e}"
+    st.warning(f"AttributeError during model loading. Check versions and custom objects.")
 except Exception as e:
-    st.error(f"An unexpected error occurred: {e}")
-    st.stop()
+    model_load_error = f"Unexpected error: {e}"
+    st.warning(f"An unexpected error occurred during model loading.")
 
 # Set background image
-with open("background.jpg", "rb") as f:
-    encoded = base64.b64encode(f.read()).decode()
+try:
+    with open("background.jpg", "rb") as f:
+        encoded = base64.b64encode(f.read()).decode()
 
-st.markdown(
-    f"""
-    <style>
-    .stApp {{
-        background-image: url("data:image/jpeg;base64,{encoded}");
-        background-size: cover;
-        background-repeat: no-repeat;
-        background-attachment: fixed;
-    }}
-    </style>
-    """,
-    unsafe_allow_html=True
-)
+    st.markdown(
+        f"""
+        <style>
+        .stApp {{
+            background-image: url("data:image/jpeg;base64,{encoded}");
+            background-size: cover;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+except FileNotFoundError:
+    st.warning("Background image not found. Check the file path.")
+except Exception as e:
+    st.warning(f"Error loading background image: {e}")
 
 # Title
 st.title("🩺 Dialysis Complication Risk Prediction")
@@ -83,7 +92,7 @@ with st.form("input_form"):
 if submitted:
     if systolic_bp <= diastolic_bp:
         st.error("❌ Systolic blood pressure must be greater than diastolic blood pressure.")
-        st.stop()
+        # Don't stop, allow the rest of the app to be seen
 
     new_data = pd.DataFrame({
         'age': [age],
@@ -98,44 +107,37 @@ if submitted:
         'comorbid_hypertension': [comorbid_hypertension]
     })
 
-    scaled_input = scaler.transform(new_data)
-
-    # Load the SavedModel as a Keras layer
-    saved_model_path = "path/to/your/saved_model"  # Replace with the actual path
-    tfsm_layer = TFSMLayer(saved_model_path, call_endpoint='serving_default')
-
-    # Create a Keras input
-    input_tensor = tf.keras.Input(shape=(10,))  # Adjust shape to match your input data
-
-    # Connect the input to the TFSMLayer
-    output_tensor = tfsm_layer(input_tensor)
-
-    # Create a Keras model
-    keras_model = Model(inputs=input_tensor, outputs=output_tensor)
-
-    # Make predictions
-    final_proba = keras_model.predict(scaled_input)[0][0]
-
-    st.markdown("### 🧪 Model Confidence Level")
-    st.metric(label="Predicted Risk (%)", value=f"{final_proba * 100:.1f}")
-
-    # Gauge-style chart using progress bar
-    st.progress(int(final_proba * 100))
-
-    # Risk Message
-    st.subheader("📌 Risk Prediction")
-    if final_proba > 0.5:
-        st.error("High Risk of Dialysis Complication ❗")
+    if scaler is not None:
+        scaled_input = scaler.transform(new_data)
     else:
-        st.success("Low Risk of Dialysis Complication ✅")
+        st.error("Scaler was not loaded. Please check the file path and version.")
+        scaled_input = None  # Prevent further errors
 
-    # Confidence Interpretation
-    if final_proba > 0.75:
-        st.markdown("**🟢 Confidence: Very High (High Risk)**")
-    elif final_proba > 0.5:
-        st.markdown("**🟠 Confidence: Moderate**")
+    if voting_model is not None and scaled_input is not None:
+        final_proba = voting_model.predict_proba(scaled_input)[0][1]
+
+        st.markdown("### 🧪 Model Confidence Level")
+        st.metric(label="Predicted Risk (%)", value=f"{final_proba * 100:.1f}")
+
+        # Gauge-style chart using progress bar
+        st.progress(int(final_proba * 100))
+
+        # Risk Message
+        st.subheader("📌 Risk Prediction")
+        if final_proba > 0.5:
+            st.error("High Risk of Dialysis Complication ❗")
+        else:
+            st.success("Low Risk of Dialysis Complication ✅")
+
+        # Confidence Interpretation
+        if final_proba > 0.75:
+            st.markdown("**🟢 Confidence: Very High (High Risk)**")
+        elif final_proba > 0.5:
+            st.markdown("**🟠 Confidence: Moderate**")
+        else:
+            st.markdown("**🔴 Confidence: Low (Low Risk)**")
     else:
-        st.markdown("**🔴 Confidence: Low (Low Risk)**")
+        st.error("Model was not loaded. Please check the file path and version.")
 
     # Timestamp
     st.caption(f"🕒 Prediction made on: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
@@ -165,8 +167,8 @@ if submitted:
     Dialysis Duration: {dialysis_duration}
     Diabetes: {comorbid_diabetes}
     Hypertension: {comorbid_hypertension}
-    Risk Score: {final_proba:.2f}
-    Prediction: {"High Risk ❗" if final_proba > 0.5 else "Low Risk ✅"}
+    Risk Score: {final_proba:.2f if voting_model is not None and scaled_input is not None else "N/A"}
+    Prediction: {"High Risk ❗" if voting_model is not None and scaled_input is not None and final_proba > 0.5 else "Low Risk ✅" if voting_model is not None and scaled_input is not None else "N/A"}
     Time: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
     """
 
@@ -184,3 +186,6 @@ with st.form("feedback_form"):
     submit_feedback = st.form_submit_button("Submit Feedback")
     if submit_feedback:
         st.success("✅ Thank you for your feedback!")
+
+if model_load_error:
+    st.error(f"The app may not function correctly due to the following error: {model_load_error}")
