@@ -24,14 +24,17 @@ def build_nn_model():
     return model
 
 # Load models
-voting_model = None
+svm_model = None
+rf_model = None
+nn_model = None
 scaler = None
 model_load_error = None
 
 try:
-    # Use custom_object_scope to handle the Keras model
-    with keras.utils.custom_object_scope({'build_nn_model': build_nn_model, 'KerasClassifier': KerasClassifier}):
-        voting_model = joblib.load("voting_model.pkl")
+    # Load individual models
+    svm_model = joblib.load("svm_model.pkl")
+    rf_model = joblib.load("rf_model.pkl")
+    nn_model = load_model("nn_model.keras")  # Load the Keras model
     scaler = joblib.load("my_scaler.pkl")  # Corrected scaler filename
 except FileNotFoundError as e:
     model_load_error = f"FileNotFoundError: {e}"
@@ -111,8 +114,14 @@ if submitted:
         st.error("Scaler was not loaded. Please check the file path and version.")
         scaled_input = None
 
-    if voting_model is not None and scaled_input is not None:
-        final_proba = voting_model.predict_proba(scaled_input)[0][1]
+    if svm_model is not None and rf_model is not None and nn_model is not None and scaled_input is not None:
+        # Get individual model predictions
+        svm_proba = svm_model.predict_proba(scaled_input)[0][1]
+        rf_proba = rf_model.predict_proba(scaled_input)[0][1]
+        nn_proba = nn_model.predict(scaled_input)[0][0]  # Assuming sigmoid output
+
+        # Average the predictions (soft voting)
+        final_proba = np.mean([svm_proba, rf_proba, nn_proba])
 
         st.markdown("### 🧪 Model Confidence Level")
         st.metric(label="Predicted Risk (%)", value=f"{final_proba * 100:.1f}")
@@ -133,7 +142,7 @@ if submitted:
         else:
             st.markdown("**🔴 Confidence: Low (Low Risk)**")
     else:
-        st.error("Model was not loaded. Please check the file path and version.")
+        st.error("One or more models were not loaded. Please check the file paths and versions.")
 
     # Timestamp
     st.caption(f"🕒 Prediction made on: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
