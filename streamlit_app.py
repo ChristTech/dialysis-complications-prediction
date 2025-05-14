@@ -5,23 +5,10 @@ import joblib
 import base64
 import datetime
 from PIL import Image
-# from tensorflow.keras.models import Sequential, load_model  # Import load_model
-# from tensorflow.keras.layers import Dense
-# import tensorflow as tf
-# from scikeras.wrappers import KerasClassifier
 from sklearn.ensemble import VotingClassifier
 from sklearn.svm import SVC
 from sklearn.ensemble import RandomForestClassifier
-# from tensorflow import keras
 
-# # Define the neural network architecture
-# def build_nn_model():
-#     model = Sequential()
-#     model.add(Dense(64, activation='relu', input_shape=(10,)))  # Make sure '10' matches your feature count
-#     model.add(Dense(32, activation='relu'))
-#     model.add(Dense(1, activation='sigmoid'))
-#     model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
-#     return model
 
 # Load models
 svm_model = None
