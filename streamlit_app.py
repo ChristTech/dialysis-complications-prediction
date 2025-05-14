@@ -5,45 +5,43 @@ import joblib
 import base64
 import datetime
 from PIL import Image
-from tensorflow.keras.models import Sequential
+from tensorflow.keras.models import Sequential, load_model  # Import load_model
 from tensorflow.keras.layers import Dense
-from tensorflow.keras.layers import TFSMLayer
-from tensorflow.keras.models import Model
 import tensorflow as tf
-from tensorflow import keras
 from scikeras.wrappers import KerasClassifier
 from sklearn.ensemble import VotingClassifier
 from sklearn.svm import SVC
 from sklearn.ensemble import RandomForestClassifier
+from tensorflow import keras
 
 # Define the neural network architecture
 def build_nn_model():
     model = Sequential()
-    model.add(Dense(64, activation='relu', input_shape=(10,)))
+    model.add(Dense(64, activation='relu', input_shape=(10,)))  # Make sure '10' matches your feature count
     model.add(Dense(32, activation='relu'))
-    model.add(Dense(1, activation='sigmoid'))  # Binary classification
+    model.add(Dense(1, activation='sigmoid'))
     model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
     return model
 
 # Load models
-voting_model = None  # Initialize to None
+voting_model = None
 scaler = None
-model_load_error = None  # Capture any loading errors
+model_load_error = None
 
 try:
     # Use custom_object_scope to handle the Keras model
     with keras.utils.custom_object_scope({'build_nn_model': build_nn_model, 'KerasClassifier': KerasClassifier}):
         voting_model = joblib.load("voting_model.pkl")
-    scaler = joblib.load("scaler.pkl")
+    scaler = joblib.load("my_scaler.pkl")  # Corrected scaler filename
 except FileNotFoundError as e:
     model_load_error = f"FileNotFoundError: {e}"
-    st.warning(f"Model or scaler file not found.  The app may not function correctly.  Check file paths.")
+    st.warning("Model or scaler file not found. Check file paths.")
 except AttributeError as e:
     model_load_error = f"AttributeError: {e}"
-    st.warning(f"AttributeError during model loading. Check versions and custom objects.")
+    st.warning("AttributeError during model loading. Check versions and custom objects.")
 except Exception as e:
     model_load_error = f"Unexpected error: {e}"
-    st.warning(f"An unexpected error occurred during model loading.")
+    st.warning(f"An unexpected error occurred during model loading: {e}")
 
 # Set background image
 try:
@@ -92,7 +90,6 @@ with st.form("input_form"):
 if submitted:
     if systolic_bp <= diastolic_bp:
         st.error("❌ Systolic blood pressure must be greater than diastolic blood pressure.")
-        # Don't stop, allow the rest of the app to be seen
 
     new_data = pd.DataFrame({
         'age': [age],
@@ -107,19 +104,18 @@ if submitted:
         'comorbid_hypertension': [comorbid_hypertension]
     })
 
+    final_proba = None
     if scaler is not None:
         scaled_input = scaler.transform(new_data)
     else:
         st.error("Scaler was not loaded. Please check the file path and version.")
-        scaled_input = None  # Prevent further errors
+        scaled_input = None
 
     if voting_model is not None and scaled_input is not None:
         final_proba = voting_model.predict_proba(scaled_input)[0][1]
 
         st.markdown("### 🧪 Model Confidence Level")
         st.metric(label="Predicted Risk (%)", value=f"{final_proba * 100:.1f}")
-
-        # Gauge-style chart using progress bar
         st.progress(int(final_proba * 100))
 
         # Risk Message
@@ -154,22 +150,29 @@ if submitted:
         """)
 
     # Downloadable Report
+    if final_proba is not None:
+        risk_status = "High Risk ❗" if final_proba > 0.5 else "Low Risk ✅"
+        risk_score_text = f"{final_proba:.2f}"
+    else:
+        risk_status = "N/A"
+        risk_score_text = "N/A"
+
     report = f"""
-    Dialysis Complication Risk Report
-    ---------------------------------
-    Age: {age}
-    Systolic BP: {systolic_bp}
-    Diastolic BP: {diastolic_bp}
-    Weight Gain: {weight_gain}
-    Sodium Level: {sodium_level}
-    Potassium Level: {potassium_level}
-    BUN: {bun}
-    Dialysis Duration: {dialysis_duration}
-    Diabetes: {comorbid_diabetes}
-    Hypertension: {comorbid_hypertension}
-    Risk Score: {final_proba:.2f if voting_model is not None and scaled_input is not None else "N/A"}
-    Prediction: {"High Risk ❗" if voting_model is not None and scaled_input is not None and final_proba > 0.5 else "Low Risk ✅" if voting_model is not None and scaled_input is not None else "N/A"}
-    Time: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+Dialysis Complication Risk Report
+---------------------------------
+Age: {age}
+Systolic BP: {systolic_bp}
+Diastolic BP: {diastolic_bp}
+Weight Gain: {weight_gain}
+Sodium Level: {sodium_level}
+Potassium Level: {potassium_level}
+BUN: {bun}
+Dialysis Duration: {dialysis_duration}
+Diabetes: {comorbid_diabetes}
+Hypertension: {comorbid_hypertension}
+Risk Score: {risk_score_text}
+Prediction: {risk_status}
+Time: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
     """
 
     st.download_button(
