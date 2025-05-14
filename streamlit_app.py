@@ -114,7 +114,7 @@ if submitted:
         st.error("Scaler was not loaded. Please check the file path and version.")
         scaled_input = None
 
-    if svm_model is not None and rf_model is not None and nn_model is not None and scaled_input is not None:
+    if svm_model is not None and rf_model is not None and scaled_input is not None:
         # Get individual model predictions
         svm_proba = svm_model.predict_proba(scaled_input)[0][1]
         rf_proba = rf_model.predict_proba(scaled_input)[0][1]
@@ -143,6 +143,7 @@ if submitted:
             st.markdown("**🔴 Confidence: Low (Low Risk)**")
     else:
         st.error("One or more models were not loaded. Please check the file paths and versions.")
+
 
     # Timestamp
     st.caption(f"🕒 Prediction made on: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
