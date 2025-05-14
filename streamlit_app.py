@@ -32,10 +32,10 @@ model_load_error = None
 
 try:
     # Load individual models
-    svm_model = joblib.load("svm_model.pkl")
-    rf_model = joblib.load("rf_model.pkl")
-    nn_model = load_model("nn_model.keras")  # Load the Keras model
-    scaler = joblib.load("my_scaler.pkl")  # Corrected scaler filename
+    svm_model = joblib.load("dialysis-complications-prediction\svm_model.pkl")
+    rf_model = joblib.load("dialysis-complications-prediction\\rf_model.pkl")
+    nn_model = load_model("dialysis-complications-prediction\\nn_model.keras")  # Load the Keras model
+    scaler = joblib.load("dialysis-complications-prediction\\my_scaler.pkl")  # Corrected scaler filename
 except FileNotFoundError as e:
     model_load_error = f"FileNotFoundError: {e}"
     st.warning("Model or scaler file not found. Check file paths.")
