@@ -5,23 +5,23 @@ import joblib
 import base64
 import datetime
 from PIL import Image
-from tensorflow.keras.models import Sequential, load_model  # Import load_model
-from tensorflow.keras.layers import Dense
-import tensorflow as tf
-from scikeras.wrappers import KerasClassifier
+# from tensorflow.keras.models import Sequential, load_model  # Import load_model
+# from tensorflow.keras.layers import Dense
+# import tensorflow as tf
+# from scikeras.wrappers import KerasClassifier
 from sklearn.ensemble import VotingClassifier
 from sklearn.svm import SVC
 from sklearn.ensemble import RandomForestClassifier
-from tensorflow import keras
+# from tensorflow import keras
 
-# Define the neural network architecture
-def build_nn_model():
-    model = Sequential()
-    model.add(Dense(64, activation='relu', input_shape=(10,)))  # Make sure '10' matches your feature count
-    model.add(Dense(32, activation='relu'))
-    model.add(Dense(1, activation='sigmoid'))
-    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
-    return model
+# # Define the neural network architecture
+# def build_nn_model():
+#     model = Sequential()
+#     model.add(Dense(64, activation='relu', input_shape=(10,)))  # Make sure '10' matches your feature count
+#     model.add(Dense(32, activation='relu'))
+#     model.add(Dense(1, activation='sigmoid'))
+#     model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+#     return model
 
 # Load models
 svm_model = None
@@ -34,7 +34,7 @@ try:
     # Load individual models
     svm_model = joblib.load("svm_model.pkl")
     rf_model = joblib.load("rf_model.pkl")
-    nn_model = load_model("nn_model.keras")  # Load the Keras model
+    # nn_model = load_model("nn_model.keras")  # Load the Keras model
     scaler = joblib.load("my_scaler.pkl")  # Corrected scaler filename
 except FileNotFoundError as e:
     model_load_error = f"FileNotFoundError: {e}"
@@ -118,10 +118,10 @@ if submitted:
         # Get individual model predictions
         svm_proba = svm_model.predict_proba(scaled_input)[0][1]
         rf_proba = rf_model.predict_proba(scaled_input)[0][1]
-        nn_proba = nn_model.predict(scaled_input)[0][0]  # Assuming sigmoid output
+        # nn_proba = nn_model.predict(scaled_input)[0][0]  # Assuming sigmoid output
 
         # Average the predictions (soft voting)
-        final_proba = np.mean([svm_proba, rf_proba, nn_proba])
+        final_proba = np.mean([svm_proba, rf_proba])
 
         st.markdown("### 🧪 Model Confidence Level")
         st.metric(label="Predicted Risk (%)", value=f"{final_proba * 100:.1f}")
