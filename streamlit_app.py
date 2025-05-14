@@ -26,7 +26,6 @@ from sklearn.ensemble import RandomForestClassifier
 # Load models
 svm_model = None
 rf_model = None
-nn_model = None
 scaler = None
 model_load_error = None
 
